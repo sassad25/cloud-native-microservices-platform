@@ -1,0 +1,18 @@
+server:
+  port: 0
+
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+  # The resource-server issuer lookup is replaced in tests by a stubbed JwtDecoder bean,
+  # so no external OAuth2 provider is required.
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus

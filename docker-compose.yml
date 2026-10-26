@@ -1,0 +1,67 @@
+services:
+  products-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: products
+      POSTGRES_USER: products
+      POSTGRES_PASSWORD: products
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U products"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  orders-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: orders
+      POSTGRES_USER: orders
+      POSTGRES_PASSWORD: orders
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U orders"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  product-service:
+    build:
+      context: .
+      dockerfile: product-service/Dockerfile
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://products-db:5432/products
+      SPRING_DATASOURCE_USERNAME: products
+      SPRING_DATASOURCE_PASSWORD: products
+      OAUTH2_ISSUER_URI: ${OAUTH2_ISSUER_URI:-http://auth:9000}
+    depends_on:
+      products-db:
+        condition: service_healthy
+    ports:
+      - "8081:8081"
+
+  order-service:
+    build:
+      context: .
+      dockerfile: order-service/Dockerfile
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://orders-db:5432/orders
+      SPRING_DATASOURCE_USERNAME: orders
+      SPRING_DATASOURCE_PASSWORD: orders
+      OAUTH2_ISSUER_URI: ${OAUTH2_ISSUER_URI:-http://auth:9000}
+    depends_on:
+      orders-db:
+        condition: service_healthy
+    ports:
+      - "8082:8082"
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
+    environment:
+      PRODUCT_SERVICE_URI: http://product-service:8081
+      ORDER_SERVICE_URI: http://order-service:8082
+    depends_on:
+      - product-service
+      - order-service
+    ports:
+      - "8080:8080"
